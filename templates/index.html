@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to FHIR Converter</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: auto;
+            max-width: 800px;
+            background-color: #333;
+            color: #fff;
+        }
+        textarea {
+            width: 100%;
+            height: 600px; /* Adjusted height to fit approximately 100 lines */
+            padding: 10px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            line-height: 1.5;
+            background-color: #222; /* Darker background for better contrast */
+            color: #fff; /* Ensuring text is white for readability */
+        }
+        .button-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-around; /* Space out buttons evenly */
+        }
+        .mdl-button {
+            flex-grow: 1; /* Buttons take equal space */
+            margin: 0 10px; /* Added some margin for spacing */
+        }
+    </style>
+</head>
+<body>
+    <h1>Speech to FHIR Converter</h1>
+    <div>
+        <div>
+            <span>Dictation</span>
+            <textarea id="speechToTextResult" placeholder="Speech recognition results..."></textarea>
+        </div>
+        <div>
+            <span>FHIR Resource</span>
+            <textarea id="fhirResource" placeholder="FHIR resource..."></textarea>
+        </div>
+    </div>
+    <div class="button-container">
+        <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="startRecognition()">
+            Start Speech Recognition
+        </button>
+        <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="stopRecognition()">
+            Stop Dictation
+        </button>
+        <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="convertToFHIR()">
+            Convert to FHIR Resource
+        </button>
+    </div>
+
+    <script>
+        var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = function(event) {
+            var transcript = '';
+            for (var i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    transcript += event.results[i][0].transcript + "\n";
+                } else {
+                    transcript += event.results[i][0].transcript;
+                }
+            }
+            document.getElementById('speechToTextResult').value += transcript;
+        };
+
+        function startRecognition() {
+            recognition.start();
+        }
+
+        function stopRecognition() {
+            recognition.stop();
+        }
+
+        function convertToFHIR() {
+            var text = document.getElementById('speechToTextResult').value;
+            axios.post('/convert', { text: text })
+                .then(function (response) {
+                    console.log(response.data);
+                    var ret = response.data.replace("```json", "");
+                    // Formatting the JSON response for pretty display
+                    // document.getElementById('fhirResource').value = JSON.stringify(response.data, null, 4);
+                    document.getElementById('fhirResource').value = ret;
+                })
+                .catch(function (error) {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+</html>
