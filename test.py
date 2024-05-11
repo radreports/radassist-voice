@@ -1,5 +1,5 @@
 from openai import OpenAI
-client = OpenAI(api_key = 'sk-proj-KxP7ienkua4n00XuuYpGT3BlbkFJG9dZ1lDgfHxy501Yjqmd')
+client = OpenAI(api_key = '')
 
 # completion = client.chat.completions.create(
 #   model="gpt-3.5-turbo",

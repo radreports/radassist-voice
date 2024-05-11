@@ -7,8 +7,8 @@ app=Flask(__name__)
 CORS(app)
 
 # Set your OpenAI API key here
-openai.api_key = 'sk-proj-KxP7ienkua4n00XuuYpGT3BlbkFJG9dZ1lDgfHxy501Yjqmd'
-client = OpenAI(api_key = 'sk-proj-KxP7ienkua4n00XuuYpGT3BlbkFJG9dZ1lDgfHxy501Yjqmd')
+openai.api_key = ''
+client = OpenAI(api_key = '')
 
 @app.route('/')
 def index():
@@ -82,6 +82,40 @@ def convert_text_to_layman():
                 {
                 "role": "user",
                 "content": f"convert radiologist dictation to text which a layman can understand: {text}"
+                }
+            ],
+            temperature=0.5,
+            max_tokens=900,
+            top_p=1
+            )
+        # Construct a FHIR resource from the response
+        print(response.choices[0].message.content)
+        print(response)
+        # fhir_resource = {
+        #     "resourceType": "Observation",
+        #     "text": text,
+        #     "interpretation": response.choices[0].message.content.strip()
+        # }
+        fhir_resource = response.choices[0].message.content.strip()
+    except Exception as e:
+        # print(e)
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify(fhir_resource)
+    # return fhir_resource
+
+
+@app.route('/conversation', methods=['POST'])
+def convert_conversation_to_layman():
+    text = request.json['text']
+    try:
+        # Using OpenAI's API to process the text and generate FHIR resource
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {
+                "role": "user",
+                "content": f"convert conversation between a patient and a doctor consultation into Diagnostic report: {text}"
                 }
             ],
             temperature=0.5,

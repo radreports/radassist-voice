@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  web:
+    image: anilyerramasu/radassist-chat
+    ports:
+      - "5009:5000"
+    environment:
+      - FLASK_ENV=development
+    
