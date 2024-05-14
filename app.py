@@ -12,7 +12,7 @@ CORS(app)
 # Set your OpenAI API key here
 token = ''
 openai.api_key = token
-client = OpenAI(api_key = token
+client = OpenAI(api_key = token)
 
 @app.route('/')
 def index():
