@@ -10,8 +10,9 @@ app=Flask(__name__)
 CORS(app)
 
 # Set your OpenAI API key here
-openai.api_key = ''
-client = OpenAI(api_key = '')
+token = ''
+openai.api_key = token
+client = OpenAI(api_key = token
 
 @app.route('/')
 def index():
@@ -150,71 +151,80 @@ def convert_text_to_fhir():
 
 
 
-@app.route('/layman', methods=['POST'])
+@app.route('/layman', methods=['GET'])
 def convert_text_to_layman():
-    text = request.json['text']
-    try:
-        # Using OpenAI's API to process the text and generate FHIR resource
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {
-                "role": "user",
-                "content": f"convert radiologist dictation to text which a layman can understand: {text}"
-                }
-            ],
-            temperature=0.5,
-            max_tokens=900,
-            top_p=1
-            )
-        # Construct a FHIR resource from the response
-        print(response.choices[0].message.content)
-        print(response)
-        # fhir_resource = {
-        #     "resourceType": "Observation",
-        #     "text": text,
-        #     "interpretation": response.choices[0].message.content.strip()
-        # }
-        fhir_resource = response.choices[0].message.content.strip()
-    except Exception as e:
-        # print(e)
-        return jsonify({"error": str(e)}), 500
+    text = request.args.get('text')
+    logging.debug(f"Received text: {text}")
+    if not text:
+        return jsonify({"error": "Missing text"}), 400
 
-    return jsonify(fhir_resource)
+    def generate_fhir_data():
+        try:
+            responses = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{
+                    "role": "user",
+                    "content": f"convert radiologist dictation to text which a layman can understand: {text}"
+                }],
+                temperature=0,
+                max_tokens=900,
+                top_p=1,
+                stream=True
+            )
+            
+            for response in responses:
+                # part = response['choices'][0]['delta']['content']
+                part = response.choices[0].delta.content
+                logging.debug(f"Streaming response part: {part}")
+                if part:  # Make sure part is not None
+                        logging.debug(f"Streaming response part: {part}")
+                        # print(f"Streaming response part: {part}")
+                        yield f"data: {part}\n\n".encode('utf-8')
+                
+        except Exception as e:
+            logging.error(f"An error occurred while streaming: {e}")
+            print(f"An error occurred while streaming: {e}")
+            yield json.dumps({"error": str(e)})  # Send error message as JSON
+
+    return Response(generate_fhir_data(), mimetype='text/event-stream')
     # return fhir_resource
 
 
-@app.route('/conversation', methods=['POST'])
+@app.route('/conversation', methods=['GET'])
 def convert_conversation_to_layman():
-    text = request.json['text']
-    try:
-        # Using OpenAI's API to process the text and generate FHIR resource
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {
-                "role": "user",
-                "content": f"convert conversation between a patient and a doctor consultation into Diagnostic report: {text}"
-                }
-            ],
-            temperature=0.5,
-            max_tokens=900,
-            top_p=1
-            )
-        # Construct a FHIR resource from the response
-        print(response.choices[0].message.content)
-        print(response)
-        # fhir_resource = {
-        #     "resourceType": "Observation",
-        #     "text": text,
-        #     "interpretation": response.choices[0].message.content.strip()
-        # }
-        fhir_resource = response.choices[0].message.content.strip()
-    except Exception as e:
-        # print(e)
-        return jsonify({"error": str(e)}), 500
+    text = request.args.get('text')
+    logging.debug(f"Received text: {text}")
+    if not text:
+        return jsonify({"error": "Missing text"}), 400
 
-    return jsonify(fhir_resource)
-    # return fhir_resource
+    def generate_fhir_data():
+        try:
+            responses = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{
+                    "role": "user",
+                    "content": f"convert conversation between a patient and a doctor consultation into Diagnostic report: {text}"
+                }],
+                temperature=0,
+                max_tokens=900,
+                top_p=1,
+                stream=True
+            )
+            
+            for response in responses:
+                # part = response['choices'][0]['delta']['content']
+                part = response.choices[0].delta.content
+                logging.debug(f"Streaming response part: {part}")
+                if part:  # Make sure part is not None
+                        logging.debug(f"Streaming response part: {part}")
+                        # print(f"Streaming response part: {part}")
+                        yield f"data: {part}\n\n".encode('utf-8')
+                
+        except Exception as e:
+            logging.error(f"An error occurred while streaming: {e}")
+            print(f"An error occurred while streaming: {e}")
+            yield json.dumps({"error": str(e)})  # Send error message as JSON
+
+    return Response(generate_fhir_data(), mimetype='text/event-stream')
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=5000,debug=True,threaded=True)
