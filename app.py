@@ -122,7 +122,7 @@ def convert_text_to_fhir():
     def generate_fhir_data():
         try:
             responses = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[{
                     "role": "user",
                     "content": f"Convert radiologist dictation to FHIR resources, please do not return any content other than the FHIR resources. I am using streaming so please return the content appropriately: {text}"
@@ -161,7 +161,7 @@ def convert_text_to_layman():
     def generate_fhir_data():
         try:
             responses = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[{
                     "role": "user",
                     "content": f"convert radiologist dictation to text which a layman can understand: {text}"
@@ -200,10 +200,10 @@ def convert_conversation_to_layman():
     def generate_fhir_data():
         try:
             responses = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[{
                     "role": "user",
-                    "content": f"convert conversation between a patient and a doctor consultation into Diagnostic report: {text}"
+                    "content": f"convert conversation between a patient and a doctor consultation into Diagnostic report along with medical codes: {text}"
                 }],
                 temperature=0,
                 max_tokens=900,
