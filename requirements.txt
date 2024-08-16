@@ -2,3 +2,4 @@ flask
 openai==1.23.6
 flask_cors
 pillow
+requests
