@@ -1,117 +1,27 @@
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, Response, jsonify, render_template
 import openai
 from openai import OpenAI
 from flask_cors import CORS
-import json
 import logging
+import io
+from PIL import Image
+import base64
+import requests
+import json
 
-
-app=Flask(__name__)
+app = Flask(__name__)
 CORS(app)
 
 # Set your OpenAI API key here
 token = ''
 openai.api_key = token
-client = OpenAI(api_key = token)
+client = OpenAI(api_key=token)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
-
-# @app.route('/fhir', methods=['POST'])
-# def convert_text_to_fhir():
-#     text = request.json['text']
-#     try:
-#         # Using OpenAI's API to process the text and generate FHIR resource
-#         response = client.chat.completions.create(
-#             model="gpt-4-turbo",
-#             messages=[
-#                 {
-#                 "role": "user",
-#                 "content": f"convert radiologist dictation to fhir resources, don't respond with verbose just return FHIR resources.extract the relevant clinical information and structure it into appropriate FHIR resources such as DiagnosticReport, Observation, and ImagingStudy: {text}"
-#                 }
-#             ],
-#             temperature=0.5,
-#             max_tokens=900,
-#             top_p=1,
-#             stream=True
-#             )
-#         # Construct a FHIR resource from the response
-#         print(response.choices[0].message.content)
-#         print(response)
-#         # fhir_resource = {
-#         #     "resourceType": "Observation",
-#         #     "text": text,
-#         #     "interpretation": response.choices[0].message.content.strip()
-#         # }
-#         fhir_resource = response.choices[0].message.content.strip()
-#     except Exception as e:
-#         # print(e)
-#         return jsonify({"error": str(e)}), 500
-
-#     return jsonify(fhir_resource)
-#     # return fhir_resource
-
-# @app.route('/fhir', methods=['GET'])
-# def convert_text_to_fhir():
-#     text = request.args.get('text')
-#     logging.debug(f"Received text: {text}")
-#     if not text:
-#         return jsonify({"error": "Missing text"}), 400
-    
-#     try:
-#         responses = client.chat.completions.create(
-#             model="gpt-4",
-#             messages=[{
-#                 "role": "user",
-#                 "content": f"Convert radiologist dictation to FHIR resources: {text}"
-#             }],
-#             temperature=0,
-#             max_tokens=900,
-#             top_p=1,
-#             stream=True
-#         )
-        
-#         print(responses)
-#         # for chunk in responses:
-#         #     # print(chunk)
-#         #     # print(chunk.choices[0].delta.content)
-            
-#         #     print("****************")
-#         full_response = ""
-#         for response in responses:
-#             part = response.choices[0].delta.content
-#             print(part)
-#             full_response += part
-#             logging.debug(f"Appending response part: {part}")
-#             # if 'choices' in response and len(response['choices']) > 0:
-#             #     # part = response['choices'][0]['delta']['content']
-#             #     part = response.choices[0].delta.content
-#             #     print(part)
-#             #     full_response += part
-#             #     logging.debug(f"Appending response part: {part}")
-
-#         if not full_response:
-#             logging.error("Received an empty response from the API.")
-#             return jsonify({"error": "Empty response from API"}), 500
-
-#         # Check the full concatenated response before parsing
-#         logging.debug(f"Full concatenated response: {full_response}")
-
-#         fhir_resource = json.loads(full_response)
-#         return jsonify(fhir_resource)
-
-#     except json.JSONDecodeError as e:
-#         logging.error(f"JSON parsing error: {e}")
-#         return jsonify({"error": "Failed to parse JSON response"}), 500
-#     except Exception as e:
-#         logging.error(f"An error occurred: {e}")
-#         return jsonify({"error": str(e)}), 500
-
-
-
+# FHIR-related route
 @app.route('/fhir', methods=['GET'])
 def convert_text_to_fhir():
     text = request.args.get('text')
@@ -134,23 +44,18 @@ def convert_text_to_fhir():
             )
             
             for response in responses:
-                # part = response['choices'][0]['delta']['content']
                 part = response.choices[0].delta.content
                 logging.debug(f"Streaming response part: {part}")
-                if part:  # Make sure part is not None
-                        logging.debug(f"Streaming response part: {part}")
-                        # print(f"Streaming response part: {part}")
-                        yield f"data: {part}\n\n".encode('utf-8')
+                if part:
+                    yield f"data: {part}\n\n".encode('utf-8')
                 
         except Exception as e:
             logging.error(f"An error occurred while streaming: {e}")
-            print(f"An error occurred while streaming: {e}")
             yield json.dumps({"error": str(e)})  # Send error message as JSON
 
     return Response(generate_fhir_data(), mimetype='text/event-stream')
 
-
-
+# Layman conversion route
 @app.route('/layman', methods=['GET'])
 def convert_text_to_layman():
     text = request.args.get('text')
@@ -173,23 +78,18 @@ def convert_text_to_layman():
             )
             
             for response in responses:
-                # part = response['choices'][0]['delta']['content']
                 part = response.choices[0].delta.content
                 logging.debug(f"Streaming response part: {part}")
-                if part:  # Make sure part is not None
-                        logging.debug(f"Streaming response part: {part}")
-                        # print(f"Streaming response part: {part}")
-                        yield f"data: {part}\n\n".encode('utf-8')
+                if part:
+                    yield f"data: {part}\n\n".encode('utf-8')
                 
         except Exception as e:
             logging.error(f"An error occurred while streaming: {e}")
-            print(f"An error occurred while streaming: {e}")
             yield json.dumps({"error": str(e)})  # Send error message as JSON
 
     return Response(generate_fhir_data(), mimetype='text/event-stream')
-    # return fhir_resource
 
-
+# Conversation conversion route
 @app.route('/conversation', methods=['GET'])
 def convert_conversation_to_layman():
     text = request.args.get('text')
@@ -212,19 +112,81 @@ def convert_conversation_to_layman():
             )
             
             for response in responses:
-                # part = response['choices'][0]['delta']['content']
                 part = response.choices[0].delta.content
                 logging.debug(f"Streaming response part: {part}")
-                if part:  # Make sure part is not None
-                        logging.debug(f"Streaming response part: {part}")
-                        # print(f"Streaming response part: {part}")
-                        yield f"data: {part}\n\n".encode('utf-8')
+                if part:
+                    yield f"data: {part}\n\n".encode('utf-8')
                 
         except Exception as e:
             logging.error(f"An error occurred while streaming: {e}")
-            print(f"An error occurred while streaming: {e}")
             yield json.dumps({"error": str(e)})  # Send error message as JSON
 
     return Response(generate_fhir_data(), mimetype='text/event-stream')
+
+# New image processing route
+@app.route('/process-image', methods=['POST'])
+def process_image():
+    # Ensure both image and prompt are provided in the request
+    if 'image' not in request.files or 'prompt' not in request.form:
+        return jsonify({"error": "Image and prompt are required"}), 400
+
+    image_file = request.files['image']
+    prompt = request.form['prompt']
+
+    if image_file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        # Load the image file
+        image = Image.open(image_file)
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format=image.format)
+        img_byte_arr = img_byte_arr.getvalue()
+
+        # Encode image to base64
+        encoded_image = base64.b64encode(img_byte_arr).decode('utf-8')
+
+        # Prepare the payload with image and prompt
+        payload = {
+            "model": "gpt-4o",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image",
+                            "image": {
+                                "base64": encoded_image
+                            }
+                        }
+                    ]
+                }
+            ],
+            "max_tokens": 300
+        }
+
+        # Send the request to OpenAI API
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai.api_key}"
+        }
+        
+        response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, data=json.dumps(payload))
+        response_data = response.json()
+
+        # Extract and return the response
+        if response.status_code == 200:
+            return jsonify(response_data)
+        else:
+            return jsonify({"error": response_data}), response.status_code
+
+    except Exception as e:
+        logging.error(f"An error occurred while processing the image: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=5000,debug=True,threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
