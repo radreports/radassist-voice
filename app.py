@@ -4,7 +4,7 @@ from openai import OpenAI
 from flask_cors import CORS
 import logging
 import io
-# from PIL import Image
+from PIL import Image
 import base64
 # import requests
 import json
