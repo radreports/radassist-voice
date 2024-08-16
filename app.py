@@ -6,7 +6,7 @@ import logging
 import io
 # from PIL import Image
 import base64
-import requests
+# import requests
 import json
 
 app = Flask(__name__)
